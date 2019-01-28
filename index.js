@@ -32,10 +32,13 @@ class Log {
 		
 		const dt = new Date();
 		const dateTime = dt.toDateString() + ' ' + dt.toTimeString().substr(0, 8);
+		const version = this.version();
+		
 		const args = [
-			dateTime,
-			`*${colors.green(this.name())}*`,
-			`(${this.version()})`,
+			`${colors.cyan(process.pid)}`,
+			`*${colors.green(this.name())}${version ? ' ' + colors.green(version) + '' : ""}*`,
+			``,
+			colors.yellow(dateTime),
 			':'
 		];
 		let i;
