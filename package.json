@@ -1,7 +1,7 @@
 {
   "name": "irrelon-log",
-  "version": "1.0.3",
-  "description": "A logging library to help write out useful console logs.",
+  "version": "1.0.4",
+  "description": "A logging library to help write out useful console logs on client and server.",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"

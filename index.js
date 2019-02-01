@@ -31,19 +31,17 @@ class Log {
 		}
 		
 		const dt = new Date();
-		const dateTime = dt.toDateString() + ' ' + dt.toTimeString().substr(0, 8);
-		const version = this.version();
+		const dateTime = colors.yellow(dt.toDateString() + ' ' + dt.toTimeString().substr(0, 8));
+		const versionNum = this.version();
+		const name = colors.green(this.name());
+		const version = versionNum ? ` ${colors.green(versionNum)}` : '';
+		const pid = (process && process.pid) ? `${colors.cyan(process.pid)} ` : '';
 		
 		const args = [
-			`${colors.cyan(process.pid)}`,
-			`*${colors.green(this.name())}${version ? ' ' + colors.green(version) + '' : ""}*`,
-			``,
-			colors.yellow(dateTime),
-			':'
+			`${pid}*${name}${version}* ${dateTime} :`
 		];
-		let i;
 		
-		for (i = 0; i < arguments.length; i++) {
+		for (let i = 0; i < arguments.length; i++) {
 			args.push(arguments[i]);
 		}
 		
