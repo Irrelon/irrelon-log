@@ -31,14 +31,14 @@ class Log {
 		}
 		
 		const dt = new Date();
-		const dateTime = colors.yellow(dt.toDateString() + ' ' + dt.toTimeString().substr(0, 8));
+		const dateTime = colors.yellow(`${dt.toISOString().substr(0, 10)} ${dt.toTimeString().substr(0, 8)}`);
 		const versionNum = this.version();
 		const name = colors.green(this.name());
 		const version = versionNum ? ` ${colors.green(versionNum)}` : '';
-		const pid = (process && process.pid) ? `${colors.cyan(process.pid)} ` : '';
+		const pid = (process && process.pid) ? `(${colors.cyan(process.pid)}) ` : '';
 		
 		const args = [
-			`${pid}*${name}${version}* ${dateTime} :`
+			`[${dateTime} ${pid}*${name}${version}*]`
 		];
 		
 		for (let i = 0; i < arguments.length; i++) {
