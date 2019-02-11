@@ -25,41 +25,72 @@ class Log {
 		return this._version;
 	}
 	
-	_msg () {
+	_msg (originalArguments, enableColors = true) {
 		if (this.mute()) {
 			return;
 		}
 		
+		let ourColors = colors;
+		
+		if (!enableColors) {
+			const returnSelf = (val) => { return val; };
+			
+			ourColors = {
+				black: returnSelf,
+				red: returnSelf,
+				green: returnSelf,
+				yellow: returnSelf,
+				blue: returnSelf,
+				magenta: returnSelf,
+				cyan: returnSelf,
+				white: returnSelf,
+				gray: returnSelf,
+				grey: returnSelf
+			}
+		}
+		
 		const dt = new Date();
-		const dateTime = colors.yellow(`${dt.toISOString().substr(0, 10)} ${dt.toTimeString().substr(0, 8)}`);
+		const dateTime = ourColors.yellow(`${dt.toISOString().substr(0, 10)} ${dt.toTimeString().substr(0, 8)}`);
 		const versionNum = this.version();
-		const name = colors.green(this.name());
-		const version = versionNum ? ` ${colors.green(versionNum)}` : '';
-		const pid = (process && process.pid) ? `(${colors.cyan(process.pid)}) ` : '';
+		const name = ourColors.green(this.name());
+		const version = versionNum ? ` ${ourColors.green(versionNum)}` : '';
+		const pid = (process && process.pid) ? `(${ourColors.cyan(process.pid)}) ` : '';
 		
 		const args = [
-			`[${dateTime} ${pid}*${name}${version}*]`
+			`${dateTime} ${pid}*${name}${version}*`
 		];
 		
-		for (let i = 0; i < arguments.length; i++) {
-			args.push(arguments[i]);
+		for (let i = 0; i < originalArguments.length; i++) {
+			args.push(originalArguments[i]);
 		}
 		
 		return args;
 	}
 	
 	info () {
-		const args = this._msg.apply(this, arguments);
+		const args = this._msg(arguments, true);
 		console.info.apply(console, args);
 	}
 	
+	dir () {
+		const args = this._msg(arguments, false);
+		console.info.apply(console, [args[0]]);
+		console.dir.apply(console, [args[1]]);
+	}
+	
 	error () {
-		const args = this._msg.apply(this, arguments);
+		let argMsg = colors.red(arguments[0]);
+		arguments[0] = argMsg;
+		
+		const args = this._msg(arguments);
 		console.error.apply(console, args);
 	}
 	
 	throw () {
-		const args = this._msg.apply(this, arguments);
+		let argMsg = colors.red(arguments[0]);
+		arguments[0] = argMsg;
+		
+		const args = this._msg(arguments);
 		throw(args.join(' '));
 	}
 	
