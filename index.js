@@ -53,11 +53,11 @@ class Log {
 		const dateTime = ourColors.yellow(`${dt.toISOString().substr(0, 10)} ${dt.toTimeString().substr(0, 8)}`);
 		const versionNum = this.version();
 		const name = ourColors.green(this.name());
-		const version = versionNum ? ` ${ourColors.green(versionNum)}` : '';
+		const version = versionNum ? `[${ourColors.green(versionNum)}] ` : `[${ourColors.green('-.-.-')}] `;
 		const pid = (process && process.pid) ? `(${ourColors.cyan(process.pid)}) ` : '';
 		
 		const args = [
-			`${dateTime} ${pid}*${name}${version}*`
+			`${dateTime} ${pid}${version}*${name}*`
 		];
 		
 		for (let i = 0; i < originalArguments.length; i++) {
@@ -73,8 +73,8 @@ class Log {
 	}
 	
 	dir () {
-		const args = this._msg(arguments, false);
-		console.info.apply(console, [args[0]]);
+		const args = this._msg(arguments, true);
+		console.info.apply(console, [args[0], 'Output from log.dir() below']);
 		console.dir.apply(console, [args[1]]);
 	}
 	
