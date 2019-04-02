@@ -5,7 +5,7 @@ const logLevel = process.env.LOG_LEVEL || ["info", "warn", "error"];
 const colors = require('colors');
 
 class Log {
-	constructor (name, version = "", mute = logLevel !== "none") {
+	constructor (name, version = "", mute = logLevel === "none") {
 		this.name(name);
 		this.version(version);
 		this.mute(mute)
