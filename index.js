@@ -1,7 +1,11 @@
+// If environment var LOG_LEVEL is set to "none" then no logs
+// will be output to the console at all from this module. Same
+// as calling log.mute(true);
+const logLevel = process.env.LOG_LEVEL || ["info", "warn", "error"];
 const colors = require('colors');
 
 class Log {
-	constructor (name, version = "", mute = false) {
+	constructor (name, version = "", mute = logLevel !== "none") {
 		this.name(name);
 		this.version(version);
 		this.mute(mute)
