@@ -1,14 +1,29 @@
 // If environment var LOG_LEVEL is set to "none" then no logs
 // will be output to the console at all from this module. Same
 // as calling log.mute(true);
-const logLevel = process.env.LOG_LEVEL || ["info", "warn", "error"];
+let logLevel;
+
+if (process.env.LOG_LEVEL && process.env.LOG_LEVEL.indexOf("[") === 0) {
+	try {
+		logLevel = JSON.parse(process.env.LOG_LEVEL);
+	} catch (e) {}
+} else if (process.env.LOG_LEVEL === "none") {
+	logLevel = ["none"];
+} else {
+	logLevel = ["info", "debug", "warn", "error"];
+}
+
 const colors = require('colors');
 
 class Log {
-	constructor (name, version = "", mute = logLevel === "none") {
+	constructor (name, version = "", mute = false) {
 		this.name(name);
 		this.version(version);
-		this.mute(mute)
+		this.logLevel(logLevel);
+		
+		if (mute === true || (logLevel.length === 1 && logLevel[0] === "none")) {
+			this.mute(true);
+		}
 	}
 	
 	name (val) {
@@ -27,6 +42,28 @@ class Log {
 		}
 		
 		return this._version;
+	}
+	
+	mute (val) {
+		if (val !== undefined) {
+			this._mute = val;
+			return this;
+		}
+		
+		return this._mute;
+	}
+	
+	logLevel (val) {
+		if (val !== undefined) {
+			this._logLevel = val;
+			return this;
+		}
+		
+		return this._logLevel;
+	}
+	
+	logLevelEnabled (levelName) {
+		return this._logLevel && this._logLevel.indexOf(levelName);
 	}
 	
 	_msg (originalArguments, enableColors = true) {
@@ -72,7 +109,16 @@ class Log {
 	}
 	
 	info () {
-		if (this.mute()) {
+		if (this.mute() || !this.logLevelEnabled("info")) {
+			return;
+		}
+		
+		const args = this._msg(arguments, true);
+		console.info.apply(console, args);
+	}
+	
+	debug () {
+		if (this.mute() || !this.logLevelEnabled("debug")) {
 			return;
 		}
 		
@@ -90,33 +136,33 @@ class Log {
 		console.dir.apply(console, [args[1]]);
 	}
 	
-	error () {
-		if (this.mute()) {
+	warn () {
+		if (this.mute() || !this.logLevelEnabled("warn")) {
 			return;
 		}
 		
-		let argMsg = colors.red(arguments[0]);
-		arguments[0] = argMsg;
+		arguments[0] = colors.yellow(arguments[0]);
+		
+		const args = this._msg(arguments);
+		console.warn.apply(console, args);
+	}
+	
+	error () {
+		if (this.mute() || !this.logLevelEnabled("error")) {
+			return;
+		}
+		
+		arguments[0] = colors.red(arguments[0]);
 		
 		const args = this._msg(arguments);
 		console.error.apply(console, args);
 	}
 	
 	throw () {
-		let argMsg = colors.red(arguments[0]);
-		arguments[0] = argMsg;
+		arguments[0] = colors.red(arguments[0]);
 		
 		const args = this._msg(arguments);
 		throw(args.join(' '));
-	}
-	
-	mute (val) {
-		if (val !== undefined) {
-			this._mute = val;
-			return this;
-		}
-		
-		return this._mute;
 	}
 }
 
