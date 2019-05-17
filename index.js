@@ -6,7 +6,9 @@ let logLevel;
 if (process.env.LOG_LEVEL && process.env.LOG_LEVEL.indexOf("[") === 0) {
 	try {
 		logLevel = JSON.parse(process.env.LOG_LEVEL);
-	} catch (e) {}
+	} catch (e) {
+		logLevel = [process.env.LOG_LEVEL];
+	}
 } else if (process.env.LOG_LEVEL === "none") {
 	logLevel = ["none"];
 } else {
@@ -63,7 +65,7 @@ class Log {
 	}
 	
 	logLevelEnabled (levelName) {
-		return this._logLevel && this._logLevel.indexOf(levelName);
+		return this._logLevel && this._logLevel.indexOf(levelName) > -1;
 	}
 	
 	_msg (originalArguments, enableColors = true) {

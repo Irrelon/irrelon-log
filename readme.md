@@ -24,6 +24,17 @@ built-in console capability. The bit Irrelon Log does
 is add a bunch of extra info on each call like the 
 process id, date/time, application name and version.
 
+## debug (msg[,...])
+Output a debug message via console.log(). This is different
+from info() in that debug() should be used for development
+purposes or when you are writing a module and want debug
+output that module consumers can switch on or off.
+
+```js
+const obj = {foo: true};
+log.info('Some object output', obj);
+```
+
 ## info (msg[,...])
 Output an info message via console.log().
 
