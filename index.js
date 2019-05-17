@@ -72,17 +72,29 @@ class Log {
 	}
 	
 	info () {
+		if (this.mute()) {
+			return;
+		}
+		
 		const args = this._msg(arguments, true);
 		console.info.apply(console, args);
 	}
 	
 	dir () {
+		if (this.mute()) {
+			return;
+		}
+		
 		const args = this._msg(arguments, true);
 		console.info.apply(console, [args[0], 'Output from log.dir() below']);
 		console.dir.apply(console, [args[1]]);
 	}
 	
 	error () {
+		if (this.mute()) {
+			return;
+		}
+		
 		let argMsg = colors.red(arguments[0]);
 		arguments[0] = argMsg;
 		
