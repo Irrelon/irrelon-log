@@ -1,171 +1,216 @@
-// If environment var LOG_LEVEL is set to "none" then no logs
-// will be output to the console at all from this module. Same
-// as calling log.mute(true);
-let logLevel;
-
-if (process.env.LOG_LEVEL && process.env.LOG_LEVEL.indexOf("[") === 0) {
-	try {
-		logLevel = JSON.parse(process.env.LOG_LEVEL);
-	} catch (e) {
-		logLevel = [process.env.LOG_LEVEL];
-	}
-} else if (process.env.LOG_LEVEL === "none") {
-	logLevel = ["none"];
-} else {
-	logLevel = ["info", "debug", "warn", "error"];
-}
-
 const colors = require('colors');
 
-class Log {
-	constructor (name, version = "", mute = false) {
-		this.name(name);
-		this.version(version);
-		this.logLevel(logLevel);
+let _env = "LOG_LEVEL";
+let _globalLevelSettings = {
+	"debug": true,
+	"info": true,
+	"warn": true,
+	"error": true
+};
+
+/**
+ * Sets the name of the environment variable to read log level settings from.
+ * @param {String} name The name of the env var to read from.
+ * @returns {String} The current env var name.
+ */
+const env = (name) => {
+	if (name !== undefined) {
+		// Record the env var name
+		_env = name;
 		
-		if (mute === true || (logLevel.length === 1 && logLevel[0] === "none")) {
-			this.mute(true);
-		}
-	}
-	
-	name (val) {
-		if (val !== undefined) {
-			this._name = val;
-			return this;
-		}
-		
-		return this._name;
-	}
-	
-	version (val) {
-		if (val !== undefined) {
-			this._version = val;
-			return this;
-		}
-		
-		return this._version;
-	}
-	
-	mute (val) {
-		if (val !== undefined) {
-			this._mute = val;
-			return this;
-		}
-		
-		return this._mute;
-	}
-	
-	logLevel (val) {
-		if (val !== undefined) {
-			this._logLevel = val;
-			return this;
-		}
-		
-		return this._logLevel;
-	}
-	
-	logLevelEnabled (levelName) {
-		return this._logLevel && this._logLevel.indexOf(levelName) > -1;
-	}
-	
-	_msg (originalArguments, enableColors = true) {
-		if (this.mute()) {
-			return;
-		}
-		
-		let ourColors = colors;
-		
-		if (!enableColors) {
-			const returnSelf = (val) => { return val; };
+		// Now read the env var we were told about and set the level from it
+		if (typeof process !== "undefined" && typeof process.env === "object") {
+			const envVarVal = process.env[name];
 			
-			ourColors = {
-				black: returnSelf,
-				red: returnSelf,
-				green: returnSelf,
-				yellow: returnSelf,
-				blue: returnSelf,
-				magenta: returnSelf,
-				cyan: returnSelf,
-				white: returnSelf,
-				gray: returnSelf,
-				grey: returnSelf
+			// Check if the env var contains JSON
+			try {
+				const json = JSON.parse(envVarVal);
+				setLevel(json);
+			} catch (e) {
+				// The env var does not contain JSON, assume it is a single text setting name e.g. debug
+				setLevel(envVarVal);
 			}
 		}
+	}
+	
+	return _env;
+};
+
+/**
+ * Gets the current value of the specified log level.
+ * @param {String} name The name of the log level to get the current value for
+ * e.g. "debug", "info" etc.
+ * @returns {Boolean} The current value.
+ */
+const getLevel = (name) => {
+	const val = _globalLevelSettings[name];
+	return val !== undefined ? val : false;
+};
+
+/**
+ * Sets log level values for one or more log levels.
+ * @param {String|Array|Object} setting The setting data.
+ * @param {Boolean=} value Optional value to set.
+ * @returns {boolean|{warn: boolean, debug: boolean, error: boolean, info: boolean}}
+ */
+const setLevel = (setting, value) => {
+	if (setting === undefined) {
+		return;
+	}
+	
+	if (setting instanceof Array) {
+		// An array of level settings
+		setting.forEach((item) => {
+			setLevel(item, true);
+		});
+	} else if (typeof setting === "object") {
+		Object.keys(setting).forEach((item) => {
+			setLevel(item, setting[item]);
+		});
+	} else if (typeof setting === "string") {
+		if (setting.startsWith('!')) {
+			setting = setting.slice(1);
+			value = false;
+		} else if (value === undefined) {
+			value = true;
+		}
 		
-		const dt = new Date();
-		const dateTime = ourColors.yellow(`${dt.toISOString().substr(0, 10)} ${dt.toTimeString().substr(0, 8)}`);
-		const versionNum = this.version();
-		const name = ourColors.green(this.name());
-		const version = versionNum ? `[${ourColors.green(versionNum)}] ` : `[${ourColors.green('-.-.-')}] `;
-		const pid = (process && process.pid) ? `(${ourColors.cyan(process.pid)}) ` : '';
+		_globalLevelSettings[setting] = value;
+		return value;
+	} else {
+		// No idea what to do here!
+		throw("Call to level() failed because we don't understand the setting provided! You can pass an object, an array or a string name as the first parameter")
+	}
+	
+	return _globalLevelSettings;
+};
+
+const levelEnabled = (levelName, ...levelSettings) => {
+	// Find the first matching level setting and use it
+	const setting = levelSettings.find((levelData) => {
+		if (levelData && levelData[levelName] !== undefined) {
+			return true;
+		}
+	});
+	
+	return setting[levelName];
+};
+
+const consoleArgs = (levelName, moduleName, moduleVersion, originalArguments, enableColors = true) => {
+	let ourColors = colors;
+	
+	if (!enableColors) {
+		const returnSelf = (val) => { return val; };
 		
-		const args = [
-			`${dateTime} ${pid}${version}*${name}*`
-		];
-		
-		for (let i = 0; i < originalArguments.length; i++) {
-			args.push(originalArguments[i]);
+		ourColors = {
+			black: returnSelf,
+			red: returnSelf,
+			green: returnSelf,
+			yellow: returnSelf,
+			blue: returnSelf,
+			magenta: returnSelf,
+			cyan: returnSelf,
+			white: returnSelf,
+			gray: returnSelf,
+			grey: returnSelf
+		}
+	}
+	
+	const dt = new Date();
+	const dateTime = ourColors.yellow(`${dt.toISOString().substr(0, 10)} ${dt.toTimeString().substr(0, 8)}`);
+	const pid = (process && process.pid) ? `(${ourColors.cyan(process.pid)}) ` : '';
+	const versionNum = moduleVersion;
+	const name = ourColors.green(moduleName);
+	const version = versionNum ? `[${ourColors.green(versionNum)}] ` : `[${ourColors.green('-.-.-')}] `;
+	const levelText = `[${levelName.toUpperCase()}] `;
+	
+	const args = [
+		`${dateTime} ${pid}${version}${levelText}*${name}*`
+	];
+	
+	for (let i = 0; i < originalArguments.length; i++) {
+		args.push(originalArguments[i]);
+	}
+	
+	return args;
+};
+
+const Log = function (moduleName, moduleVersion, moduleLevelSettings) {
+	const applyMiddleWare = (middleWare, args) => {
+		if (middleWare.length) {
+			middleWare.map((middleWareFunc) => {
+				const newArgs = middleWareFunc(...args);
+				
+				if (!(newArgs instanceof Array)) {
+					// Throw here as middleWare failed
+					throw new Error("Middleware function failed to return an array: " + middleWareFunc.toString());
+				}
+				
+				args = newArgs;
+			});
 		}
 		
 		return args;
-	}
+	};
 	
-	info () {
-		if (this.mute() || !this.logLevelEnabled("info")) {
-			return;
+	const logFunc = (levelName, ...middleWare) => {
+		return function () {
+			if (!levelEnabled(levelName, moduleLevelSettings, _globalLevelSettings)) {
+				return;
+			}
+			
+			let finalArgs = arguments;
+			finalArgs = applyMiddleWare(middleWare, finalArgs);
+			
+			const args = consoleArgs(levelName, moduleName, moduleVersion, finalArgs);
+			return console.log.apply(console, args);
 		}
-		
-		const args = this._msg(arguments, true);
-		console.info.apply(console, args);
-	}
+	};
 	
-	debug () {
-		if (this.mute() || !this.logLevelEnabled("debug")) {
-			return;
+	const strFunc = (levelName, ...middleWare) => {
+		return function () {
+			if (!levelEnabled(levelName, moduleLevelSettings, _globalLevelSettings)) {
+				return;
+			}
+			
+			let finalArgs = arguments;
+			finalArgs = applyMiddleWare(middleWare, finalArgs);
+			
+			const args = consoleArgs(levelName, moduleName, moduleVersion, finalArgs, false);
+			return args.join(" ");
 		}
-		
-		const args = this._msg(arguments, true);
-		console.info.apply(console, args);
-	}
+	};
 	
-	dir () {
-		if (this.mute()) {
-			return;
-		}
-		
-		const args = this._msg(arguments, true);
-		console.info.apply(console, [args[0], 'Output from log.dir() below']);
-		console.dir.apply(console, [args[1]]);
-	}
-	
-	warn () {
-		if (this.mute() || !this.logLevelEnabled("warn")) {
-			return;
-		}
-		
-		arguments[0] = colors.yellow(arguments[0]);
-		
-		const args = this._msg(arguments);
-		console.warn.apply(console, args);
-	}
-	
-	error () {
-		if (this.mute() || !this.logLevelEnabled("error")) {
-			return;
-		}
-		
-		arguments[0] = colors.red(arguments[0]);
-		
-		const args = this._msg(arguments);
-		console.error.apply(console, args);
-	}
-	
-	throw () {
-		arguments[0] = colors.red(arguments[0]);
-		
-		const args = this._msg(arguments);
-		throw(args.join(' '));
-	}
-}
+	return {
+		"debug": logFunc("debug", (arg1, ...args) => { arg1 = colors.white(arg1); return [arg1, ...args]; }),
+		"info": logFunc("info", (arg1, ...args) => { arg1 = colors.white(arg1); return [arg1, ...args]; }),
+		"warn": logFunc("warn", (arg1, ...args) => { arg1 = colors.yellow(arg1); return [arg1, ...args]; }),
+		"error": logFunc("error", (arg1, ...args) => { arg1 = colors.red(arg1); return [arg1, ...args]; }),
+		"debugLine": strFunc("debug"),
+		"errorLine": strFunc("info"),
+		"warnLine": strFunc("warn"),
+		"infoLine": strFunc("error")
+	};
+};
 
-module.exports = Log;
+/**
+ * Creates a new log instance for a module in your code.
+ * @param {String} moduleName The name of the module this log instance is for.
+ * @param {String} version The version of the module this log instance is for.
+ * @param {String|Array|Object} level Calls setLevel() but applies the passed
+ * levels only to this instance.
+ * @returns {{warn: (function(): void), debug: (function(): void), infoLine: (function(): string), warnLine: (function(): string), error: (function(): void), debugLine: (function(): string), errorLine: (function(): string), info: (function(): void)}}
+ */
+const init = (moduleName, version, level) => {
+	return new Log(moduleName, version, level);
+};
+
+// Default the log level env var name to LOG_LEVEL
+env("LOG_LEVEL");
+
+module.exports = {
+	env,
+	getLevel,
+	setLevel,
+	init
+};
