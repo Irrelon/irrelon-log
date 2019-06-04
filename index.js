@@ -239,7 +239,7 @@ const Log = function (moduleName, moduleVersion, moduleLevelSettings) {
  * levels only to this instance.
  * @returns {{warn: (function(*, ...[*]): void), debug: (function(*, ...[*]): void), infoLine: (function(*, ...[*]): string), warnLine: (function(*, ...[*]): string), error: (function(*, ...[*]): void), debugLine: (function(*, ...[*]): string), errorLine: (function(*, ...[*]): string), info: (function(*, ...[*]): void)}}
  */
-const init = (moduleName, version, level = {}) => {
+const init = (moduleName, version = "_._._", level = {}) => {
 	return new Log(moduleName, version, level);
 };
 
