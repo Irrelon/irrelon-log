@@ -1,6 +1,6 @@
 {
   "name": "irrelon-log",
-  "version": "2.0.1",
+  "version": "2.0.2",
   "description": "A logging library to help write out useful console logs on client and server.",
   "main": "index.js",
   "scripts": {
