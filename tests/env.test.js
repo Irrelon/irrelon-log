@@ -1,12 +1,11 @@
 const assert = require("assert");
-const {env} = require("../index");
-const {getLevel} = require("../index");
+const {readEnv, getLevel} = require("../index");
 
-describe("env()", () => {
+describe("readEnv()", () => {
 	it("Will correctly set levels based on single text in the the env var", () => {
 		process.env.LOG_LEVEL_FOO = 'debug';
 		
-		env("LOG_LEVEL_FOO");
+		readEnv("LOG_LEVEL_FOO");
 		
 		const debugVal = getLevel("debug");
 		
@@ -16,7 +15,7 @@ describe("env()", () => {
 	it("Will correctly disable levels based on single text in the the env var", () => {
 		process.env.LOG_LEVEL_FOO = '!debug';
 		
-		env("LOG_LEVEL_FOO");
+		readEnv("LOG_LEVEL_FOO");
 		
 		const debugVal = getLevel("debug");
 		
@@ -26,7 +25,7 @@ describe("env()", () => {
 	it("Will correctly set levels based on array JSON in the the env var", () => {
 		process.env.LOG_LEVEL_FOO = '["debug", "!info"]';
 		
-		env("LOG_LEVEL_FOO");
+		readEnv("LOG_LEVEL_FOO");
 		
 		const debugVal = getLevel("debug");
 		const infoVal = getLevel("info");
@@ -38,7 +37,7 @@ describe("env()", () => {
 	it("Will correctly set levels based on object JSON in the the env var", () => {
 		process.env.LOG_LEVEL_FOO = '{"debug": true, "info": false}';
 		
-		env("LOG_LEVEL_FOO");
+		readEnv("LOG_LEVEL_FOO");
 		
 		const debugVal = getLevel("debug");
 		const infoVal = getLevel("info");

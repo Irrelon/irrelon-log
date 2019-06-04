@@ -1,23 +1,24 @@
+// Will assume a production environment unless specified in NODE_ENV
+const ENV = typeof process !== "undefined" ? process.env.NODE_ENV : "production";
 const colors = require('colors');
 
-let _env = "IRRELON_LOG";
 let _globalLevelSettings = {
-	"debug": false,
-	"info": false,
-	"warn": false,
-	"error": false
+	"*": {
+		"debug": false,
+		"info": ENV !== "production",
+		"warn": ENV !== "production",
+		"error": true
+	}
 };
 
 /**
  * Sets the name of the environment variable to read log level settings from.
  * @param {String} name The name of the env var to read from.
- * @returns {String} The current env var name.
+ * @param {String=} moduleName Optional module name to read env var for. Defaults to *.
+ * @returns Nothing.
  */
-const env = (name) => {
+const readEnv = (name, moduleName = "*") => {
 	if (name !== undefined) {
-		// Record the env var name
-		_env = name;
-		
 		// Now read the env var we were told about and set the level from it
 		if (typeof process !== "undefined" && typeof process.env === "object") {
 			const envVarVal = process.env[name];
@@ -25,15 +26,13 @@ const env = (name) => {
 			// Check if the env var contains JSON
 			try {
 				const json = JSON.parse(envVarVal);
-				setLevel(json);
+				setLevel(json, undefined, moduleName);
 			} catch (e) {
 				// The env var does not contain JSON, assume it is a single text setting name e.g. debug
-				setLevel(envVarVal);
+				setLevel(envVarVal, undefined, moduleName);
 			}
 		}
 	}
-	
-	return _env;
 };
 
 /**
@@ -43,7 +42,7 @@ const env = (name) => {
  * @returns {Boolean} The current value.
  */
 const getLevel = (name) => {
-	const val = _globalLevelSettings[name];
+	const val = _globalLevelSettings["*"][name];
 	return val !== undefined ? val : false;
 };
 
@@ -51,49 +50,55 @@ const getLevel = (name) => {
  * Sets log level values for one or more log levels.
  * @param {String|Array|Object} setting The setting data.
  * @param {Boolean=} value Optional value to set.
+ * @param {String=} moduleName Optional module name to set setting for. Defaults to *.
  * @returns {boolean|{warn: boolean, debug: boolean, error: boolean, info: boolean}}
  */
-const setLevel = (setting, value) => {
+const setLevel = (setting, value, moduleName = "*") => {
 	if (setting === undefined) {
-		return;
+		return false;
 	}
 	
 	if (setting instanceof Array) {
 		// An array of level settings
 		setting.forEach((item) => {
-			setLevel(item, true);
+			setLevel(item, true, moduleName);
 		});
 	} else if (typeof setting === "object") {
 		Object.keys(setting).forEach((item) => {
-			setLevel(item, setting[item]);
+			setLevel(item, setting[item], moduleName);
 		});
 	} else if (setting === "*") {
 		// Turn all settings on
-		Object.keys(_globalLevelSettings).forEach((item) => {
-			setLevel(item, true);
+		Object.keys(_globalLevelSettings["*"]).forEach((item) => {
+			setLevel(item, true, moduleName);
 		});
 	} else if (setting === "!*") {
 		// Turn all settings off
-		Object.keys(_globalLevelSettings).forEach((item) => {
-			setLevel(item, false);
+		Object.keys(_globalLevelSettings["*"]).forEach((item) => {
+			setLevel(item, false, moduleName);
 		});
 	} else if (typeof setting === "string" && setting.indexOf(",") !== -1) {
 		// We have a comma separated values list, convert to array
 		// and assume all are off unless otherwise specified
 		const settingArr = setting.split(",");
 		settingArr.forEach((item) => {
-			setLevel(item);
+			setLevel(item, undefined, moduleName);
 		});
+	} else if (typeof setting === "string" && setting.indexOf("=") !== -1) {
+		// We have a module override setting
+		const settingDetail = setting.split("=");
+		moduleName = settingDetail[0];
+		setting = settingDetail[1];
+		setLevel(setting, undefined, moduleName);
 	} else if (typeof setting === "string" && setting.startsWith('!')) {
-		
 		// All except this setting
 		setting = setting.slice(1);
 		
-		Object.keys(_globalLevelSettings).forEach((item) => {
+		Object.keys(_globalLevelSettings["*"]).forEach((item) => {
 			if (item === setting) {
-				setLevel(item, false);
+				setLevel(item, false, moduleName);
 			} else {
-				setLevel(item, true);
+				setLevel(item, true, moduleName);
 			}
 		});
 	} else if (typeof setting === "string") {
@@ -102,13 +107,14 @@ const setLevel = (setting, value) => {
 			value = true;
 		}
 		
-		_globalLevelSettings[setting] = value;
+		_globalLevelSettings[moduleName] = _globalLevelSettings[moduleName] || {};
+		_globalLevelSettings[moduleName][setting] = value;
 	} else {
 		// No idea what to do here!
 		throw("Call to level() failed because we don't understand the setting provided! You can pass an object, an array or a string name as the first parameter")
 	}
 	
-	return _globalLevelSettings;
+	return _globalLevelSettings[moduleName] || {};
 };
 
 const levelEnabled = (levelName, ...levelSettings) => {
@@ -186,7 +192,7 @@ const Log = function (moduleName, moduleVersion, moduleLevelSettings) {
 		 * @param {...*} otherArgs Any further args to send to the console.
 		 */
 		return function (msg, ...otherArgs) {
-			if (!levelEnabled(levelName, moduleLevelSettings, _globalLevelSettings)) {
+			if (!levelEnabled(levelName, _globalLevelSettings[moduleName], moduleLevelSettings, _globalLevelSettings["*"])) {
 				return;
 			}
 			
@@ -206,7 +212,7 @@ const Log = function (moduleName, moduleVersion, moduleLevelSettings) {
 		 * @returns {String} The log line as a string.
 		 */
 		return function (msg, ...otherArgs) {
-			if (!levelEnabled(levelName, moduleLevelSettings, _globalLevelSettings)) {
+			if (!levelEnabled(levelName, _globalLevelSettings[moduleName], moduleLevelSettings, _globalLevelSettings["*"])) {
 				return;
 			}
 			
@@ -249,10 +255,10 @@ const init = (moduleName, version = "_._._", level = {}) => {
 };
 
 // Default the log level env var name to IRRELON_LOG
-env("IRRELON_LOG");
+readEnv("IRRELON_LOG");
 
 module.exports = {
-	env,
+	readEnv,
 	getLevel,
 	setLevel,
 	init
