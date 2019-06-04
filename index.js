@@ -240,6 +240,11 @@ const Log = function (moduleName, moduleVersion, moduleLevelSettings) {
  * @returns {{warn: (function(*, ...[*]): void), debug: (function(*, ...[*]): void), infoLine: (function(*, ...[*]): string), warnLine: (function(*, ...[*]): string), error: (function(*, ...[*]): void), debugLine: (function(*, ...[*]): string), errorLine: (function(*, ...[*]): string), info: (function(*, ...[*]): void)}}
  */
 const init = (moduleName, version = "_._._", level = {}) => {
+	if (typeof version === "object") {
+		level = version;
+		version = "_._._";
+	}
+	
 	return new Log(moduleName, version, level);
 };
 
