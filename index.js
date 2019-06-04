@@ -1,11 +1,11 @@
 const colors = require('colors');
 
-let _env = "LOG_LEVEL";
+let _env = "IRRELON_LOG";
 let _globalLevelSettings = {
-	"debug": true,
-	"info": true,
-	"warn": true,
-	"error": true
+	"debug": false,
+	"info": false,
+	"warn": false,
+	"error": false
 };
 
 /**
@@ -67,16 +67,42 @@ const setLevel = (setting, value) => {
 		Object.keys(setting).forEach((item) => {
 			setLevel(item, setting[item]);
 		});
+	} else if (setting === "*") {
+		// Turn all settings on
+		Object.keys(_globalLevelSettings).forEach((item) => {
+			setLevel(item, true);
+		});
+	} else if (setting === "!*") {
+		// Turn all settings off
+		Object.keys(_globalLevelSettings).forEach((item) => {
+			setLevel(item, false);
+		});
+	} else if (typeof setting === "string" && setting.indexOf(",") !== -1) {
+		// We have a comma separated values list, convert to array
+		// and assume all are off unless otherwise specified
+		const settingArr = setting.split(",");
+		settingArr.forEach((item) => {
+			setLevel(item);
+		});
+	} else if (typeof setting === "string" && setting.startsWith('!')) {
+		
+		// All except this setting
+		setting = setting.slice(1);
+		
+		Object.keys(_globalLevelSettings).forEach((item) => {
+			if (item === setting) {
+				setLevel(item, false);
+			} else {
+				setLevel(item, true);
+			}
+		});
 	} else if (typeof setting === "string") {
-		if (setting.startsWith('!')) {
-			setting = setting.slice(1);
-			value = false;
-		} else if (value === undefined) {
+		// Only this setting
+		if (value === undefined) {
 			value = true;
 		}
 		
 		_globalLevelSettings[setting] = value;
-		return value;
 	} else {
 		// No idea what to do here!
 		throw("Call to level() failed because we don't understand the setting provided! You can pass an object, an array or a string name as the first parameter")
@@ -154,7 +180,12 @@ const Log = function (moduleName, moduleVersion, moduleLevelSettings) {
 	};
 	
 	const logFunc = (levelName, ...middleWare) => {
-		return function () {
+		/**
+		 * Send a message to the console.
+		 * @param {*} msg The message to send.
+		 * @param {...*} otherArgs Any further args to send to the console.
+		 */
+		return function (msg, ...otherArgs) {
 			if (!levelEnabled(levelName, moduleLevelSettings, _globalLevelSettings)) {
 				return;
 			}
@@ -168,7 +199,13 @@ const Log = function (moduleName, moduleVersion, moduleLevelSettings) {
 	};
 	
 	const strFunc = (levelName, ...middleWare) => {
-		return function () {
+		/**
+		 * Generates a string log line but does not send it to the console.
+		 * @param {*} msg The message to send.
+		 * @param {...*} otherArgs Any further args to send to the console.
+		 * @returns {String} The log line as a string.
+		 */
+		return function (msg, ...otherArgs) {
 			if (!levelEnabled(levelName, moduleLevelSettings, _globalLevelSettings)) {
 				return;
 			}
@@ -180,6 +217,7 @@ const Log = function (moduleName, moduleVersion, moduleLevelSettings) {
 			return args.join(" ");
 		}
 	};
+	
 	
 	return {
 		"debug": logFunc("debug", (arg1, ...args) => { arg1 = colors.white(arg1); return [arg1, ...args]; }),
@@ -197,16 +235,16 @@ const Log = function (moduleName, moduleVersion, moduleLevelSettings) {
  * Creates a new log instance for a module in your code.
  * @param {String} moduleName The name of the module this log instance is for.
  * @param {String} version The version of the module this log instance is for.
- * @param {String|Array|Object} level Calls setLevel() but applies the passed
+ * @param {Object=} level Calls setLevel() but applies the passed
  * levels only to this instance.
- * @returns {{warn: (function(): void), debug: (function(): void), infoLine: (function(): string), warnLine: (function(): string), error: (function(): void), debugLine: (function(): string), errorLine: (function(): string), info: (function(): void)}}
+ * @returns {{warn: (function(*, ...[*]): void), debug: (function(*, ...[*]): void), infoLine: (function(*, ...[*]): string), warnLine: (function(*, ...[*]): string), error: (function(*, ...[*]): void), debugLine: (function(*, ...[*]): string), errorLine: (function(*, ...[*]): string), info: (function(*, ...[*]): void)}}
  */
-const init = (moduleName, version, level) => {
+const init = (moduleName, version, level = {}) => {
 	return new Log(moduleName, version, level);
 };
 
-// Default the log level env var name to LOG_LEVEL
-env("LOG_LEVEL");
+// Default the log level env var name to IRRELON_LOG
+env("IRRELON_LOG");
 
 module.exports = {
 	env,
